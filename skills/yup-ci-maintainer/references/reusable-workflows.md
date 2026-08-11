@@ -15,7 +15,6 @@ The CI caller provides:
 - `debug_targets_json`
 - `release_test_targets_json`
 - `windows_debug_plugins`
-- `force_heavy`
 
 The release caller provides `product_name` and grants `actions: read` plus `contents: write`.
 
