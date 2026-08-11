@@ -1,0 +1,4 @@
+interface:
+  display_name: "YUP Plugin Builder"
+  short_description: "Build, test, and find staged YUP plugin artifacts"
+  default_prompt: "Use $yup-build-plugin to build, test, and verify this EHL YUP plugin."

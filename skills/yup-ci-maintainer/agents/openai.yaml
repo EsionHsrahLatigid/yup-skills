@@ -1,0 +1,4 @@
+interface:
+  display_name: "YUP CI Maintainer"
+  short_description: "Validate reusable YUP CI and release wrappers"
+  default_prompt: "Use $yup-ci-maintainer to adopt or validate the shared EHL YUP CI workflows."
