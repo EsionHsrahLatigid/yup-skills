@@ -13,6 +13,8 @@ npx skills add EsionHsrahLatigid/yup-skills \
 
 The repository follows the `skills/<name>/SKILL.md` discovery convention used by the skills CLI.
 
+Current `skills` CLI releases keep the global canonical copy under `~/.agents/skills/` even when `--agent codex` is selected; Codex lists and loads that location. Environments that require a literal `~/.codex/skills/<name>` path can add a compatibility symlink to the canonical copy.
+
 ## Included skills
 
 - `yup-build-plugin`: build, test, locate, and verify the stable `artifacts/` product tree.
