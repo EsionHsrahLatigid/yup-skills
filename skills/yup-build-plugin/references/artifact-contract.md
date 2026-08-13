@@ -16,6 +16,16 @@ Expected platform keys are `macos-arm64` and `windows-x64` in GitHub Actions. Lo
 
 `ARTIFACTS.txt` records product, profile, platform, configuration, and format names. It is evidence about the staged copy, not a substitute for tests or signature verification.
 
+For local macOS builds outside CI, the same `ehl_stage_products` target physically copies the staged plugin bundles to:
+
+```text
+~/Library/Audio/Plug-Ins/
+├── VST3/<slug>_vst3_plugin.vst3
+└── Components/<slug>_au_plugin.component
+```
+
+The target replaces only those exact bundle paths. It does not install the Standalone application, delete unrelated plugins, or create symlinks. `ARTIFACTS.txt` records `installed_vst3` and `installed_au` paths when copying is enabled. CI, Windows, and explicit `-DEHL_COPY_PLUGIN_AFTER_BUILD=OFF` builds only refresh `artifacts/`. `EHL_USER_VST3_DIR` and `EHL_USER_AU_DIR` can redirect local copies.
+
 The repository owns a vendored copy of:
 
 - `cmake/EhlYupArtifactLayout.cmake`

@@ -1,6 +1,6 @@
 ---
 name: yup-build-plugin
-description: Build, test, stage, and inspect EHL audio plugin repositories based on YUP and CMake presets. Use when working in a YUP plugin repo that has engine-debug and plugin-release presets, when a user cannot find built Standalone/VST3/AU products, when validating the stable artifacts tree contract, or when diagnosing local build and codesign failures.
+description: Build, test, stage, install, and inspect EHL audio plugin repositories based on YUP and CMake presets. Use when working in a YUP plugin repo that has engine-debug and plugin-release presets, when a user cannot find built or user-installed Standalone/VST3/AU products, when validating the stable artifacts and local macOS plugin-copy contract, or when diagnosing local build and codesign failures.
 ---
 
 # YUP Plugin Builder
@@ -27,8 +27,18 @@ Build through the repository's named CMake presets and treat `artifacts/` as the
    ctest --preset plugin-release --output-on-failure
    ```
 
-5. Run `python3 scripts/verify_artifacts.py <repo>` from this skill directory. Pass `--codesign` on macOS when signatures are part of the claim.
-6. Report the exact `artifacts/plugin-release/<platform-arch>` path and the formats found. Do not direct humans into YUP's generator-dependent subdirectories under `build/`.
+   On local macOS outside CI, `ehl_stage_products` also copies the staged VST3 and AU bundles into the current user's plugin folders. Standalone applications remain in `artifacts/`.
+5. Run `python3 scripts/verify_artifacts.py <repo>` from this skill directory. On macOS, pass `--installed --codesign` to prove that the user-installed bundles are physical copies matching the staged content and that both copies have valid signatures.
+6. Report the exact `artifacts/plugin-release/<platform-arch>` path plus the installed VST3/AU paths. Do not direct humans into YUP's generator-dependent subdirectories under `build/`.
+
+Disable or redirect local installation at configure time when required:
+
+```sh
+cmake --preset plugin-release -DEHL_COPY_PLUGIN_AFTER_BUILD=OFF
+cmake --preset plugin-release \
+  -DEHL_USER_VST3_DIR=/alternate/VST3 \
+  -DEHL_USER_AU_DIR=/alternate/Components
+```
 
 ## Failure handling
 
@@ -36,6 +46,7 @@ Build through the repository's named CMake presets and treat `artifacts/` as the
 - If `ehl_stage_products` is missing, inspect `cmake/EhlYupArtifactLayout.cmake`, `cmake/StageYupProducts.cmake`, the call in `CMakeLists.txt`, and the `plugin-release` build preset.
 - If staging reports multiple matching bundles, remove only stale build directories after confirming their exact scope; never broadly delete the repository.
 - If tests fail, stop packaging claims and report the failing test command and output.
-- On macOS, verify all staged `.app`, `.vst3`, and `.component` bundles with `codesign --verify --deep --strict`.
+- If a local plugin copy differs from the staged bundle, rebuild `ehl_stage_products`; do not repair it by copying an internal YUP build directory.
+- On macOS, verify all staged and installed `.app`, `.vst3`, and `.component` bundles with `codesign --verify --deep --strict`.
 
 Read [references/artifact-contract.md](references/artifact-contract.md) when adopting or changing the shared output structure.
