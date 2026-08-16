@@ -68,6 +68,31 @@ def main() -> None:
     if len(release_presets) != 1 or "ehl_stage_products" not in release_presets[0].get("targets", []):
         fail("plugin-release build preset must include ehl_stage_products")
 
+    install_configure = [
+        preset for preset in presets.get("configurePresets", [])
+        if preset.get("name") == "plugin-install"
+    ]
+    if len(install_configure) != 1:
+        fail("expected exactly one plugin-install configure preset")
+    install_configure_preset = install_configure[0]
+    if install_configure_preset.get("inherits") != "plugin-release":
+        fail("plugin-install configure preset must inherit plugin-release")
+    if install_configure_preset.get("cacheVariables", {}).get("EHL_COPY_PLUGIN_AFTER_BUILD") != "ON":
+        fail("plugin-install configure preset must set EHL_COPY_PLUGIN_AFTER_BUILD=ON")
+
+    for preset_kind in ("buildPresets", "testPresets"):
+        install_presets = [
+            preset for preset in presets.get(preset_kind, [])
+            if preset.get("name") == "plugin-install"
+        ]
+        if len(install_presets) != 1:
+            fail(f"expected exactly one plugin-install preset in {preset_kind}")
+        install_preset = install_presets[0]
+        if install_preset.get("inherits") != "plugin-release":
+            fail(f"plugin-install preset in {preset_kind} must inherit plugin-release")
+        if install_preset.get("configurePreset") != "plugin-install":
+            fail(f"plugin-install preset in {preset_kind} must use the plugin-install configure preset")
+
     for relative in (
         "cmake/EhlYupArtifactLayout.cmake",
         "cmake/StageYupProducts.cmake",
@@ -77,6 +102,7 @@ def main() -> None:
 
     print(f"repo={repo}")
     print(f"yup_actions_sha={next(iter(matches.values()))}")
+    print("local_install_preset=valid")
     print("status=valid")
 
 

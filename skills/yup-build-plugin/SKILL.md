@@ -19,7 +19,7 @@ Build through the repository's named CMake presets and treat `artifacts/` as the
    ctest --preset engine-debug --output-on-failure
    ```
 
-4. For distributable local products, run:
+4. For ordinary distributable products, run:
 
    ```sh
    cmake --preset plugin-release
@@ -27,18 +27,31 @@ Build through the repository's named CMake presets and treat `artifacts/` as the
    ctest --preset plugin-release --output-on-failure
    ```
 
-   On local macOS outside CI, `ehl_stage_products` also copies the staged VST3 and AU bundles into the current user's plugin folders. Standalone applications remain in `artifacts/`.
-5. Run `python3 scripts/verify_artifacts.py <repo>` from this skill directory. On macOS, pass `--installed --codesign` to prove that the user-installed bundles are physical copies matching the staged content and that both copies have valid signatures.
-6. Report the exact `artifacts/plugin-release/<platform-arch>` path plus the installed VST3/AU paths. Do not direct humans into YUP's generator-dependent subdirectories under `build/`.
+   A fresh local macOS configure defaults the copy option to `ON`; CI and non-macOS configure default it to `OFF`.
 
-Disable or redirect local installation at configure time when required:
+5. For a guaranteed local macOS install, prefer the explicit install preset:
+
+   ```sh
+   cmake --preset plugin-install
+   cmake --build --preset plugin-install --parallel
+   ctest --preset plugin-install --output-on-failure
+   ```
+
+   If the repository does not yet provide `plugin-install`, configure `plugin-release` with `-DEHL_COPY_PLUGIN_AFTER_BUILD=ON` before building it. Pass the option explicitly because an older CMake cache may retain `OFF` even though a fresh local macOS configure defaults to `ON`. The install path copies VST3 and AU bundles into the current user's plugin folders; Standalone applications remain in `artifacts/`.
+6. Run `python3 scripts/verify_artifacts.py <repo>` from this skill directory. On macOS, pass `--installed --codesign` to prove that the user-installed bundles are physical copies matching the staged content and that both copies have valid signatures.
+7. Report the exact `artifacts/plugin-release/<platform-arch>` path plus the installed VST3/AU paths. Do not direct humans into YUP's generator-dependent subdirectories under `build/`.
+
+For repositories without `plugin-install`, force or redirect local installation at configure time when required:
 
 ```sh
-cmake --preset plugin-release -DEHL_COPY_PLUGIN_AFTER_BUILD=OFF
+cmake --preset plugin-release -DEHL_COPY_PLUGIN_AFTER_BUILD=ON
 cmake --preset plugin-release \
+  -DEHL_COPY_PLUGIN_AFTER_BUILD=ON \
   -DEHL_USER_VST3_DIR=/alternate/VST3 \
   -DEHL_USER_AU_DIR=/alternate/Components
 ```
+
+Use `-DEHL_COPY_PLUGIN_AFTER_BUILD=OFF` only when staging without touching user plugin folders is intentional.
 
 ## Failure handling
 

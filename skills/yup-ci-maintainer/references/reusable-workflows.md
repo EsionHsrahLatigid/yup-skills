@@ -23,3 +23,5 @@ GitHub resolves reusable workflows at job level with `jobs.<id>.uses`. A reusabl
 The caller's permissions can only reduce the reusable workflow's token permissions. Keep explicit least-privilege permissions in both the caller and shared workflow.
 
 Centralization does not centralize dependency caches across repositories: GitHub Actions cache scope still includes repository boundaries. `sccache` improves repeat builds within each plugin repository, while path classification avoids unnecessary heavy jobs entirely.
+
+Caller repositories also expose `plugin-install` configure/build/test presets for local macOS use. These presets inherit `plugin-release`; only the configure preset adds `EHL_COPY_PLUGIN_AFTER_BUILD=ON`. Reusable CI continues to use `plugin-release`, so macOS and Windows runners remain free of user-folder installation side effects.

@@ -26,6 +26,8 @@ For local macOS builds outside CI, the same `ehl_stage_products` target physical
 
 The target replaces only those exact bundle paths. It does not install the Standalone application, delete unrelated plugins, or create symlinks. `ARTIFACTS.txt` records `installed_vst3` and `installed_au` paths when copying is enabled. CI, Windows, and explicit `-DEHL_COPY_PLUGIN_AFTER_BUILD=OFF` builds only refresh `artifacts/`. `EHL_USER_VST3_DIR` and `EHL_USER_AU_DIR` can redirect local copies.
 
+Use the repository's `plugin-install` configure/build/test presets for a guaranteed local copy. They inherit `plugin-release` and explicitly set `EHL_COPY_PLUGIN_AFTER_BUILD=ON`, overriding a stale cache value. For older repositories, configure with `cmake --preset plugin-release -DEHL_COPY_PLUGIN_AFTER_BUILD=ON` before building. Do not rely on a cached default when the requested outcome is an actual user-folder install.
+
 The repository owns a vendored copy of:
 
 - `cmake/EhlYupArtifactLayout.cmake`

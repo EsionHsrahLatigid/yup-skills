@@ -34,5 +34,6 @@ Keep triggers, permissions, concurrency, and product inputs in each plugin repos
 - Latest artifacts contain one platform ZIP and one SHA-256 manifest, retained for 14 days.
 - Tag releases rebuild nothing; they promote artifacts from exactly one successful `main` push CI run for the tag commit.
 - Release publication verifies tag/project version equality, checksums, ZIP integrity, and the final two-asset set.
+- Each caller exposes `plugin-install` configure/build/test presets. They inherit `plugin-release`, and the configure preset explicitly sets `EHL_COPY_PLUGIN_AFTER_BUILD=ON` so local installation is not dependent on a stale cache value.
 
 Read [references/reusable-workflows.md](references/reusable-workflows.md) before changing workflow inputs or provenance behavior.
