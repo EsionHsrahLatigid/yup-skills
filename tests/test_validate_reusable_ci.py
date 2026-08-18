@@ -43,6 +43,8 @@ class ReusableCiValidatorTests(unittest.TestCase):
             encoding="utf-8",
         )
         release_lines = [
+            "concurrency:",
+            "  cancel-in-progress: false",
             "jobs:",
             "  release:",
             (
@@ -138,6 +140,21 @@ class ReusableCiValidatorTests(unittest.TestCase):
             result = self.run_validator(repo, "--require-signed-release")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("missing named secret mapping", result.stderr)
+
+    def test_rejects_signed_release_that_cancels_notarization(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repo = self.create_repo(Path(temporary_directory), signed_release=True)
+            release = repo / ".github/workflows/release.yml"
+            release.write_text(
+                release.read_text(encoding="utf-8").replace(
+                    "cancel-in-progress: false",
+                    "cancel-in-progress: true",
+                ),
+                encoding="utf-8",
+            )
+            result = self.run_validator(repo, "--require-signed-release")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must not cancel notarization", result.stderr)
 
 
 if __name__ == "__main__":

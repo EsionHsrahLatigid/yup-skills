@@ -58,6 +58,8 @@ def main() -> None:
     if args.require_signed_release:
         if "plugin-release-signed.yml@" not in release:
             fail("release caller is not using plugin-release-signed.yml")
+        if not re.search(r"cancel-in-progress:\s*false", release):
+            fail("signed release caller must not cancel notarization in progress")
         for secret in SIGNING_SECRETS:
             expected = f"{secret}: ${{{{ secrets.{secret} }}}}"
             if expected not in release:
