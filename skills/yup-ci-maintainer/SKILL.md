@@ -18,6 +18,8 @@ Keep triggers, permissions, concurrency, and product inputs in each plugin repos
 7. Run `actionlint`, then `python3 scripts/validate_reusable_ci.py <repo>` from this skill directory.
 8. Push one pilot repository and require macOS arm64, Windows x64, and `CI Summary` to succeed before rolling the same central SHA out further.
 
+When changing `plugin-release-signed.yml` itself, also run the central repository's `scripts/validate_signed_release_workflow.py` and Python regression suite before creating a caller pin candidate.
+
 ## Change workflow
 
 1. Change and validate `yup-actions` first.
@@ -33,6 +35,8 @@ Keep triggers, permissions, concurrency, and product inputs in each plugin repos
 - Windows runs on the declared Visual Studio runner/generator and executes tests with `-C`.
 - Latest artifacts contain one platform ZIP and one SHA-256 manifest, retained for 14 days.
 - Tag releases rebuild nothing; they promote artifacts from exactly one successful `main` push CI run for the tag commit.
+- A tagless `canary_sha` is non-publishing only. It must be a lowercase full commit SHA equal to GitHub's current `main` HEAD, resolve exactly one successful canonical `main` push CI run, and verify the macOS ZIP plus `SHA256SUMS.txt` before the protected signing environment is requested.
+- `tag_name` and `canary_sha` are mutually exclusive. Keep the publishing tag provenance and GitHub Release path locked when changing canary behavior.
 - Release publication verifies tag/project version equality, checksums, ZIP integrity, and the final two-asset set.
 - Each caller exposes `plugin-install` configure/build/test presets. They inherit `plugin-release`, and the configure preset explicitly sets `EHL_COPY_PLUGIN_AFTER_BUILD=ON` so local installation is not dependent on a stale cache value.
 
