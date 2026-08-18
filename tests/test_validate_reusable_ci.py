@@ -16,7 +16,13 @@ PIN = "1" * 40
 
 
 class ReusableCiValidatorTests(unittest.TestCase):
-    def create_repo(self, root: Path, copy_value: str = "ON") -> Path:
+    def create_repo(
+        self,
+        root: Path,
+        copy_value: str = "ON",
+        signed_release: bool = False,
+        include_signing_secrets: bool = True,
+    ) -> Path:
         workflows = root / ".github/workflows"
         workflows.mkdir(parents=True)
         (workflows / "ci.yml").write_text(
@@ -36,16 +42,26 @@ class ReusableCiValidatorTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        (workflows / "release.yml").write_text(
-            "\n".join(
-                (
-                    "jobs:",
-                    "  release:",
-                    f"    uses: EsionHsrahLatigid/yup-actions/.github/workflows/plugin-release.yml@{PIN}",
-                )
+        release_lines = [
+            "jobs:",
+            "  release:",
+            (
+                "    uses: EsionHsrahLatigid/yup-actions/.github/workflows/"
+                f"{'plugin-release-signed' if signed_release else 'plugin-release'}.yml@{PIN}"
             ),
-            encoding="utf-8",
-        )
+        ]
+        if signed_release and include_signing_secrets:
+            release_lines.append("    secrets:")
+            for secret in (
+                "MACOS_CERTIFICATE_P12_BASE64",
+                "MACOS_CERTIFICATE_PASSWORD",
+                "APPLE_TEAM_ID",
+                "APPLE_API_KEY_ID",
+                "APPLE_API_ISSUER_ID",
+                "APPLE_API_PRIVATE_KEY_P8_BASE64",
+            ):
+                release_lines.append(f"      {secret}: ${{{{ secrets.{secret} }}}}")
+        (workflows / "release.yml").write_text("\n".join(release_lines), encoding="utf-8")
         presets = {
             "configurePresets": [
                 {"name": "plugin-release"},
@@ -79,9 +95,13 @@ class ReusableCiValidatorTests(unittest.TestCase):
             (cmake / helper).write_text("# fixture\n", encoding="utf-8")
         return root
 
-    def run_validator(self, repo: Path) -> subprocess.CompletedProcess[str]:
+    def run_validator(
+        self,
+        repo: Path,
+        *options: str,
+    ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [sys.executable, str(SCRIPT), str(repo)],
+            [sys.executable, str(SCRIPT), *options, str(repo)],
             check=False,
             capture_output=True,
             text=True,
@@ -100,6 +120,24 @@ class ReusableCiValidatorTests(unittest.TestCase):
             )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("EHL_COPY_PLUGIN_AFTER_BUILD=ON", result.stderr)
+
+    def test_accepts_signed_release_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repo = self.create_repo(Path(temporary_directory), signed_release=True)
+            result = self.run_validator(repo, "--require-signed-release")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("signed_release=valid", result.stdout)
+
+    def test_rejects_signed_release_without_named_secret_mappings(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repo = self.create_repo(
+                Path(temporary_directory),
+                signed_release=True,
+                include_signing_secrets=False,
+            )
+            result = self.run_validator(repo, "--require-signed-release")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing named secret mapping", result.stderr)
 
 
 if __name__ == "__main__":

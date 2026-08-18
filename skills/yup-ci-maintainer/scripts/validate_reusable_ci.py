@@ -12,7 +12,16 @@ from pathlib import Path
 
 SHA_CALL = re.compile(
     r"uses:\s+EsionHsrahLatigid/yup-actions/\.github/workflows/"
-    r"(plugin-ci|plugin-release)\.yml@([0-9a-f]{40})"
+    r"(plugin-ci|plugin-release(?:-signed)?)\.yml@([0-9a-f]{40})"
+)
+
+SIGNING_SECRETS = (
+    "MACOS_CERTIFICATE_P12_BASE64",
+    "MACOS_CERTIFICATE_PASSWORD",
+    "APPLE_TEAM_ID",
+    "APPLE_API_KEY_ID",
+    "APPLE_API_ISSUER_ID",
+    "APPLE_API_PRIVATE_KEY_P8_BASE64",
 )
 
 
@@ -23,6 +32,7 @@ def fail(message: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--require-signed-release", action="store_true")
     parser.add_argument("repo", nargs="?", default=".", type=Path)
     args = parser.parse_args()
     repo = args.repo.resolve()
@@ -43,6 +53,15 @@ def main() -> None:
 
     if len(set(matches.values())) != 1:
         fail(f"CI and release use different yup-actions commits: {matches}")
+
+    release = release_path.read_text(encoding="utf-8")
+    if args.require_signed_release:
+        if "plugin-release-signed.yml@" not in release:
+            fail("release caller is not using plugin-release-signed.yml")
+        for secret in SIGNING_SECRETS:
+            expected = f"{secret}: ${{{{ secrets.{secret} }}}}"
+            if expected not in release:
+                fail(f"signed release caller is missing named secret mapping: {secret}")
 
     ci = ci_path.read_text(encoding="utf-8")
     for key in (
@@ -103,6 +122,7 @@ def main() -> None:
     print(f"repo={repo}")
     print(f"yup_actions_sha={next(iter(matches.values()))}")
     print("local_install_preset=valid")
+    print(f"signed_release={'valid' if args.require_signed_release else 'not-required'}")
     print("status=valid")
 
 
