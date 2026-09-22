@@ -1,6 +1,6 @@
 ---
 name: yup-build-plugin
-description: Build, test, stage, install, and inspect EHL audio plugin repositories based on YUP and CMake presets. Use when working in a YUP plugin repo that has engine-debug and plugin-release presets, when a user cannot find built or user-installed Standalone/VST3/AU products, when validating the stable artifacts and local macOS plugin-copy contract, or when diagnosing local build and codesign failures.
+description: Build, test, stage, install, and inspect EHL audio plugin repositories based on YUP and CMake presets. Use when working in a YUP plugin repo that has engine-debug and plugin-release presets, when a user cannot find built or user-installed Standalone/VST3/AU products, when validating the stable artifacts and local macOS plugin-copy contract, or when diagnosing local build, codesign, standalone startup, and native GUI failures.
 ---
 
 # YUP Plugin Builder
@@ -39,7 +39,8 @@ Build through the repository's named CMake presets and treat `artifacts/` as the
 
    If the repository does not yet provide `plugin-install`, configure `plugin-release` with `-DEHL_COPY_PLUGIN_AFTER_BUILD=ON` before building it. Pass the option explicitly because an older CMake cache may retain `OFF` even though a fresh local macOS configure defaults to `ON`. The install path copies VST3 and AU bundles into the current user's plugin folders; Standalone applications remain in `artifacts/`.
 6. Run `python3 scripts/verify_artifacts.py <repo>` from this skill directory. On macOS, pass `--installed --codesign` to prove that the user-installed bundles are physical copies matching the staged content and that both copies have valid signatures.
-7. Report the exact `artifacts/plugin-release/<platform-arch>` path plus the installed VST3/AU paths. Do not direct humans into YUP's generator-dependent subdirectories under `build/`.
+7. For startup, event-loop, or UI changes, verify the affected behavior in the actual staged application or requested plugin host. Build success, headless component tests, and offscreen snapshots do not establish native window capture or input delivery. Record a native verification gap if the required tool/host is unavailable; do not silently count it as passed.
+8. Report the exact `artifacts/plugin-release/<platform-arch>` path plus the installed VST3/AU paths. Do not direct humans into YUP's generator-dependent subdirectories under `build/`.
 
 For repositories without `plugin-install`, force or redirect local installation at configure time when required:
 
@@ -55,6 +56,7 @@ Use `-DEHL_COPY_PLUGIN_AFTER_BUILD=OFF` only when staging without touching user 
 
 ## Failure handling
 
+- For macOS standalone launch, AX/CUA timeouts, or a custom AppKit/SDL event loop, read [references/macos-native-startup.md](references/macos-native-startup.md) before retrying or proposing a lifecycle fix. Do not apply a standalone startup workaround inside a plugin host.
 - If configure fails while fetching dependencies, retry at most three times with short backoff; preserve the first and final errors.
 - If `ehl_stage_products` is missing, inspect `cmake/EhlYupArtifactLayout.cmake`, `cmake/StageYupProducts.cmake`, the call in `CMakeLists.txt`, and the `plugin-release` build preset.
 - If staging reports multiple matching bundles, remove only stale build directories after confirming their exact scope; never broadly delete the repository.
