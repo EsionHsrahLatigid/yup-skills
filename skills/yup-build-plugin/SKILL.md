@@ -1,6 +1,6 @@
 ---
 name: yup-build-plugin
-description: Build, test, stage, install, and inspect EHL audio plugin repositories based on YUP and CMake presets. Use when working in a YUP plugin repo that has engine-debug and plugin-release presets, when a user cannot find built or user-installed Standalone/VST3/AU products, when validating the stable artifacts and local macOS plugin-copy contract, or when diagnosing local build, codesign, standalone startup, and native GUI failures.
+description: Build, test, stage, install, and inspect EHL audio plugin repositories based on YUP and CMake presets. Use when working in a YUP plugin repo that has engine-debug and plugin-release presets, when a user cannot find built or user-installed Standalone/VST3/AU products, when validating the stable artifacts and local macOS plugin-copy contract, when diagnosing local build, codesign, standalone startup, and native GUI failures, or when changing the pinned YUP revision or diagnosing Objective-C class collisions between plugins loaded in one host.
 ---
 
 # YUP Plugin Builder
@@ -57,6 +57,7 @@ Use `-DEHL_COPY_PLUGIN_AFTER_BUILD=OFF` only when staging without touching user 
 ## Failure handling
 
 - For macOS standalone launch, AX/CUA timeouts, or a custom AppKit/SDL event loop, read [references/macos-native-startup.md](references/macos-native-startup.md) before retrying or proposing a lifecycle fix. Do not apply a standalone startup workaround inside a plugin host.
+- If a host prints `Class ... is implemented in both`, or an AU editor opens only for the first of several YUP plugins, or before changing the pinned YUP revision, read [references/yup-pin-objc-class-collisions.md](references/yup-pin-objc-class-collisions.md). The pin is a patched fork revision and several files must change together.
 - If configure fails while fetching dependencies, retry at most three times with short backoff; preserve the first and final errors.
 - If `ehl_stage_products` is missing, inspect `cmake/EhlYupArtifactLayout.cmake`, `cmake/StageYupProducts.cmake`, the call in `CMakeLists.txt`, and the `plugin-release` build preset.
 - If staging reports multiple matching bundles, remove only stale build directories after confirming their exact scope; never broadly delete the repository.
