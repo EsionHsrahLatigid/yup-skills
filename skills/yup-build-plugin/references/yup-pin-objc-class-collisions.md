@@ -51,6 +51,13 @@ upstream revision at or after `ab12f499` contains the fix.
   ...)` when the RHI module was split out, and no Breaking entry mentions it. It
   broke only Reverb4D's snapshot test. Build every project, including tests
   (`ctest`), before committing a pin change.
+- Build `yup-ehl-design-module` standalone as well (`cmake -S . -B <scratch>`
+  plus `ctest`). Plugin builds never build it standalone, so its own test
+  executable is only exercised by its CI. At ca9fd92a, upstream `yup_events`
+  gained a `__weak` reference. The contract test compiled YUP's ObjC++ without
+  ARC and failed. The fix was to call `_yup_module_apply_arc_to_target_sources`
+  on the test target. Any other non-plugin executable that links YUP modules
+  needs the same.
 - Also check the Standalone apps after a bump, because upstream rewrote
   `AudioDeviceManager` in this range. Launch one from the build tree and capture
   its window to confirm it opens and renders.
