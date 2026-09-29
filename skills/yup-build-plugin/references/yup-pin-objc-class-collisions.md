@@ -21,21 +21,39 @@ factory cannot find the second plugin's AU instance, so no editor is created.
 Which plugin fails depends on load order.
 
 SDL classes had the same problem, which was fixed upstream in kunitoki/yup#112 by
-the per-plugin `sdl-symbols-patch.h.in`. YUP's own classes were fixed in
-kunitoki/yup#199 (opened 2026-09-28). That PR adds
+the per-plugin `sdl-symbols-patch.h.in`. YUP's own classes were fixed by
+kunitoki/yup#199, which was merged through kunitoki/yup#201 as upstream commit
+`ab12f499a8be3e39dee0a01d46afcbee123a8f30` (2026-09-28). That commit adds
 `cmake/resources/objc-symbols-patch.h.in`, which is force-included next to the
 SDL header and renames each class to `<target>_YupPlugin_<Class>`. It also makes
-the CocoaUI property report `NSStringFromClass` of the renamed factory.
+the CocoaUI property report `NSStringFromClass` of the renamed factory. Any
+upstream revision at or after `ab12f499` contains the fix.
 
-## Current EHL pin (2026-09-28)
+## Current EHL pin
 
-- Revision `fa83e8c55664727ae5a53b94a3f6b5b336ce9e57` is upstream
-  `9a1c9bc699b6a714f6f52486462d98a140c8bf95` plus the #199 commit
-  cherry-picked, on branch `ehl/9a1c9bc-objc-class-fix` of the org fork
-  `https://github.com/EsionHsrahLatigid/yup.git`. Keep that branch alive while
-  any repository pins it: CI fetches it through FetchContent. (The same branch
-  also exists on the personal fork `2bbb/yup`, which is the head of #199; it is
-  not referenced by any pin.)
+- Since 2026-09-29, the pin is upstream `kunitoki/yup`
+  `ca9fd92a8e56da8924676858512118aa0ff37272`, the main branch just after #201.
+  It is not a fork, so the fix no longer needs re-applying on updates. Still
+  re-scan for new static classes, as described below.
+- History, 2026-09-28 to 2026-09-29: the pin was
+  `fa83e8c55664727ae5a53b94a3f6b5b336ce9e57`, which is 9a1c9bc plus #199
+  cherry-picked. It lives on branch `ehl/9a1c9bc-objc-class-fix` of the org fork
+  `EsionHsrahLatigid/yup` (the personal fork `2bbb/yup` has the same branch). Old
+  commits of the plugin repos still fetch it, so keep that branch as long as those
+  commits must stay buildable.
+- Moving from 9a1c9bc to upstream main was a 38-commit framework update, not
+  only the fix. It included breaking changes to FlexItem, Grid, Font loading,
+  Component drag and drop, Oversampler, `Graphics::setClipPath` and DataTree.
+  Before bumping, grep the plugin sources for every **Breaking** / **Behavior
+  change** API in the CHANGELOG diff. In 2026-09 no EHL code used any of them.
+  The CHANGELOG scan is not enough, though. `GraphicsContext::createContext
+  (GraphicsContext::Metal, ...)` became `createContext (yup::GpuPlatform::Metal,
+  ...)` when the RHI module was split out, and no Breaking entry mentions it. It
+  broke only Reverb4D's snapshot test. Build every project, including tests
+  (`ctest`), before committing a pin change.
+- Also check the Standalone apps after a bump, because upstream rewrote
+  `AudioDeviceManager` in this range. Launch one from the build tree and capture
+  its window to confirm it opens and renders.
 - The pin is written in these places:
   - Every plugin `CMakeLists.txt` has a FetchContent `GIT_REPOSITORY` + `GIT_TAG`.
     Some projects (CodecScar-style) also check `git rev-parse HEAD` of
@@ -46,8 +64,8 @@ the CocoaUI property report `NSStringFromClass` of the renamed factory.
   - Build-instruction docs: README "pinned to commit" lines, LatchFault
     README/README_ja, Reverb4D THIRD_PARTY.md. DESIGN.md, reports and
     SOURCES.md record the revision that was *inspected* at the time; leave them.
-  - `cmake/YupMacOSIconWorkaround.cmake` comments mention 9a1c9bc. Those remain
-    true, because the fix does not touch icon generation.
+  - `cmake/YupMacOSIconWorkaround.cmake` comments mention 9a1c9bc. Recheck
+    whether the workaround is still needed when the pin moves.
 - `../yup` must be checked out at the pinned commit for local builds. The
   shared checkout is used by every project, so switch it only with explicit user
   approval and update every repository in the same pass. Otherwise the
@@ -61,11 +79,13 @@ grep -rl <old-hash> --exclude-dir={build,_deps,output,artifacts,.git,yup,externa
 
 ## When YUP is updated
 
-1. **#199 (or an equivalent) is merged upstream and you move to that upstream
-   revision:** point `GIT_REPOSITORY` back to `https://github.com/kunitoki/yup.git`,
-   set the new hash everywhere listed above, and check out `../yup` at it. Then
-   verify, as described below.
-2. **You move to an upstream revision without the fix:** create a new branch
+1. **Normal update (upstream at or after `ab12f499`):** set the new hash
+   everywhere listed above, keep `GIT_REPOSITORY` at
+   `https://github.com/kunitoki/yup.git`, check out `../yup` at it, re-scan for
+   static classes (see step 2), and verify as described below.
+2. **Moving to an upstream revision before `ab12f499`** (should not happen
+   again), **or when a newly added class has to be patched before upstream
+   accepts it:** create a new branch
    from the target revision and cherry-pick the fix. Only `CHANGELOG.md` is
    expected to conflict; keep the target's file and re-add the one entry.
    Then re-scan for static classes, because new ones appear over time. Between
